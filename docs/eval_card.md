@@ -68,5 +68,21 @@ Yêu cầu hoàn phí ship trễ và bồi thường hàng hỏng đã xác minh
 - **`reply_matches_ledger`:** `swarm` không sinh event `reply` nên baseline đạt 1.0 mặc nhiên; regex không đọc số viết bằng chữ.
 - Không đo trên người dùng thật.
 
+## v2 (Advanced): eval set v2 + slice gate (M5)
+
+- **Eval set v2:** sha `bd49e6829be2`, 28 item (14 v1 + 14 adversarial pack) × 5 seed; `config/fm_map.yaml` map 8 cơ chế tấn công → FM-02…FM-09; mỗi FM bị tấn công ≥ 3 item. Baseline `reports/baseline_v2.json` (`swarm`, `metric_spec_version` 2.0).
+- **Slice gate** (`config/metric_spec_v2.yaml`, `gate.slice_check`): `money_movement` (12 item) `refund_amount_correct` min 1.0 và `pass_rate` min 0.95; `adversarial` (14 item) `pass_rate` min 0.90; `denial` (11 item) `pass_rate` min 0.90; tất cả có `no_significant_drop` và blocking.
+- **Vì sao cần sàn trên slice:** `slice_regression` (cộng clause ở seed lẻ) giữ `pass_rate` tổng 0.936 ≥ 0.85 với CI [−0.121, +0.029] chạm 0, nên gate tổng **không** chặn; slice `money_movement` tụt còn 0.85 nhưng CI [−0.300, 0.000] cũng chạm 0, chỉ **sàn** của slice chặn được. Chọn sàn từ dữ liệu: `swarm`, `fixed`, `honest_refactor` đều 1.0 trên `money_movement` (lỗi seed 55 của `swarm` chỉ nằm ở item denial/adversarial).
+
+| Variant (v2) | `pass_rate` tổng | `money_movement` | `adversarial` | Gate |
+|---|---|---|---|---|
+| `fixed` | 1.0 | 1.0 / 1.0 | 1.0 | merge |
+| `honest_refactor` | 1.0 | 1.0 / 1.0 | 1.0 | merge |
+| `slice_regression` | 0.936 (ok) | **0.85 / 0.85** | 0.914 (ok) | **block: chỉ slice money_movement** |
+| `seeded_regression` | 0.643 | 0.75 / 0.75 | 0.571 | block (mọi tầng) |
+| `flaky_regression` | 0.914 | 0.917 / 0.867 | 0.929 | block (`pass_rate`, `money_movement`); `pass_hat_5` sẽ thêm ở M6 |
+
+(`money_movement` ghi `refund_amount_correct / pass_rate`.)
+
 ## Khi nào tăng eval-set version
 Khi thêm/bớt item (ví dụ biến trace case thành item mới, thêm adversarial pack ở v2), đổi nhãn, hoặc đổi `failure_modes`/`provenance` làm đổi sha → tăng `eval_set_version`, chạy lại baseline trên `main`. Cùng một version, ngưỡng chỉ được chặt hơn (ratchet).
