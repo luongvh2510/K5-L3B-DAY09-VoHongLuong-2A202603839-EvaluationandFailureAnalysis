@@ -1,0 +1,3 @@
+# Bonus only (Inspect AI port of the Lab 9 graders). Not needed by the CI gate.
+# python -m pip install -r requirements.txt -r requirements-lab9.txt -r requirements-bonus.txt
+inspect-ai==0.3.291
