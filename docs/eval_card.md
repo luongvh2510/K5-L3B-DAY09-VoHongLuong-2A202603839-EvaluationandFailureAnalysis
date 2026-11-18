@@ -2,8 +2,8 @@
 
 Card này đi kèm mỗi báo cáo và được dùng lại ở Day 10. Mọi con số lấy từ report do `python -m lab9.eval` sinh ra (commit bằng `git add -f`), không gõ tay.
 
-- **Run ID / eval set SHA:** baseline `E-swarm-20261118-350c` (`reports/baseline_v1.json`) · PR `E-fixed-20261118-350c`, `E-seeded_regression-20261118-350c` · eval set `350c0e653d51`
-- **Phiên bản:** nhánh `starter/d09` (graders `72fd2c5`, bootstrap `14e81e6`) · eval set v1 (sha `350c0e653d51`) · `metric_spec_version` 1.0 · grader `lab9.graders.GRADERS` · seeds 11/22/33/44/55 · MockLLM · Python 3.13
+- **Run ID / eval set SHA:** baseline `E-swarm-20261118-a05d` (`reports/baseline_v1.json`) · PR `E-fixed-20261118-a05d`, `E-seeded_regression-20261118-a05d` · eval set `a05d3255ecd1`
+- **Phiên bản:** nhánh `starter/d09` (graders `72fd2c5`, bootstrap `14e81e6`) · eval set v1 (sha `a05d3255ecd1`) · `metric_spec_version` 1.0 · grader `lab9.graders.GRADERS` · seeds 11/22/33/44/55 · MockLLM · Python 3.13
 - **Eval set:** v1, 14 item × 5 seed = 70 trial, nguồn `lab8_public` (ma trận T01–T14); nhãn tách riêng ở `data/eval/labels_v1.json`; mỗi item có `failure_modes` theo `docs/failure_taxonomy.md`, 6 item có `provenance.from_trace`
 
 ## Metric & ngưỡng (`config/metric_spec.yaml`)

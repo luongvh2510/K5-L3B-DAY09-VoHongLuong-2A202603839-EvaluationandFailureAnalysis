@@ -20,7 +20,7 @@ python -m lab9.trace_case --shape fixed --claim C-008 --seed 11
 
 | Trường | Nội dung |
 |---|---|
-| Trial | `seeded_regression C-008@11` (item E-008), run ID `E-seeded_regression-20261118-350c`, eval set `350c0e653d51`; baseline `E-swarm-20261118-350c` |
+| Trial | `seeded_regression C-008@11` (item E-008), run ID `E-seeded_regression-20261118-a05d`, eval set `a05d3255ecd1`; baseline `E-swarm-20261118-a05d` |
 | Triệu chứng | `reply_matches_ledger` = False ("reply says 35000 but ledger holds 20000"). Reply nói **"Dạ, LogiX đã hoàn 35.000đ cho đơn O-808."**, ledger ghi `refund_vnd=20000`. Grader Lab 8 (`pass_rate`) **PASS** và `refund_amount_correct` cũng đúng (20.000 = nhãn), nên nếu chỉ có các grader cũ thì trial này "xanh" |
 | Bước sai đầu tiên | Event 5 `reply` `{"text": "Dạ, LogiX đã hoàn 35.000đ cho đơn O-808."}` |
 | Vì sao là bước *đầu tiên* | Event 2 `investigator` đọc đơn O-808 đúng (trễ 4 ngày, phí ship 35.000). Event 3 `quote {"amount_vnd": 35000, "reason": "entitled", "clause_ids": ["SHIP-LATE-03"]}` đúng chính sách. Event 4 `refund_history {"refund_count": 0, "refunded_vnd": 0}` chỉ là lệnh đọc; không có event `proposal`, tức agent không tự trừ và gửi đúng quote 35.000 cho host. Host ghi `min(quote, approved_vnd)` = 20.000 vì approval A-008 chỉ duyệt 20.000: ledger đúng nhãn. Sai đầu tiên là reply báo số agent đề xuất thay vì số host đã ghi |
