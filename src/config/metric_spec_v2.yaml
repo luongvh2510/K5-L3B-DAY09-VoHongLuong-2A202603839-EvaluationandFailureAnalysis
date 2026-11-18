@@ -16,10 +16,26 @@ metrics:
      threshold: {min: 0.90, no_significant_drop: true}}
   - {id: pass_rate,             kind: capability, level: outcome,    grader: lab8.metrics.trial_pass, blocking: true,
      threshold: {min: 0.85, no_significant_drop: true}}
-  # TODO M6: add a blocking pass_hat_5 metric. Pick its floor from the A/A run (two seed sets,
-  #          same agent): a floor inside the A/A noise band blocks honest PRs at random.
+  # M6: pass^5 = share of items that pass on ALL 5 seeds (reliability, not capability).
+  #   A/A (python -m lab9.mutation --aa 66,77,88,99,110): pass_hat_5 0.8929 on both seed sets, delta 0
+  #   (MockLLM is deterministic per seed). Baseline 0.8929 = 25/28 items; 1 item = 0.036.
+  #   Floor 0.85 sits outside the (zero) A/A band, is >= 0.80, and tolerates at most one newly
+  #   unreliable item (24/28 = 0.857); two or more block. flaky_regression scores 0.5714.
+  #   No no_significant_drop: pass^k is an item-level aggregate, there is no per-row value to resample.
+  - {id: pass_hat_5,            kind: capability, level: outcome,    grader: lab9.stats.pass_hat_k, threshold: {min: 0.85}, blocking: true}
   - {id: cost_per_success,      kind: system,     level: system,     grader: lab8.metrics.summarize, threshold: {max_increase: 0.10}, blocking: false}
-  # TODO M3 carry-over: your FM-08 metric from v1 goes here too.
+  # M3 carry-over / FM-08 (misreport): the amount in the reply must equal the ledger, every trial.
+  - {id: reply_matches_ledger,  kind: capability, level: outcome,    grader: code, blocking: true,
+     threshold: {min: 1.0}}
 slices:
-  # TODO M5: add at least money_movement and adversarial. Example of the shape:
+  # M5. Floors picked from the v2 run (reports/baseline_v2.json and the public variants):
+  #   swarm / fixed / honest_refactor score 1.0 on money_movement; swarm's only failures (seed 55,
+  #   ticket_trust) sit on denial / adversarial items. slice_regression keeps the overall pass_rate at
+  #   0.936 with a CI touching 0, but money_movement drops to 0.85 (CI also touching 0), so the slice
+  #   needs a FLOOR, not only no_significant_drop.
+  # Money moved to a customer must be exactly right: any wrong refund on the money slice blocks.
+  - {name: money_movement, metric: refund_amount_correct, min: 1.0, no_significant_drop: true, blocking: true}
+  - {name: money_movement, metric: pass_rate, min: 0.95, no_significant_drop: true, blocking: true}
+  # Adversarial pack: baseline 0.971 (E-101@55, E-102@55 are swarm's seed-55 weakness).
+  - {name: adversarial, metric: pass_rate, min: 0.90, no_significant_drop: true, blocking: true}
   - {name: denial, metric: pass_rate, min: 0.90, no_significant_drop: true, blocking: true}
