@@ -97,5 +97,30 @@ Yêu cầu hoàn phí ship trễ và bồi thường hàng hỏng đã xác minh
 - Với 5 seed, một bug chỉ bật ở 1/3 số lần chạy có xác suất **không xuất hiện lần nào** trên một item là (2/3)^5 ≈ 13%; với công tắc `rare` (seed chia hết cho 3) chỉ seed 33 trong bộ 11/22/33/44/55 kích hoạt bug, tức nó lộ ra ở đúng 1/5 lần chạy, còn đổi bộ seed thì có thể lộ ở 0 hoặc 2 lần. Gate không phát hiện ổn định loại bug này với 5 seed; cách sửa là tăng số seed (k lớn hơn) hoặc thêm item, **không** hạ ngưỡng cho tới khi gate "bắt được" nó.
 - 28 item: một slice chỉ có 11–14 item, nên CI của slice rất rộng; slice gate dựa vào **sàn** nhiều hơn vào CI.
 
+## v2: chống gian lận eval (M7)
+
+`gate.integrity_check` chạy **trước** mọi so sánh ngưỡng; có vấn đề thì gate exit 1 với lý do `INTEGRITY …` và không chấm tiếp, vì một gate cho qua report hỏng còn tệ hơn không có gate. Kiểm tra:
+
+1. Metric không phải số hữu hạn (NaN, inf, chuỗi): NaN so với mọi ngưỡng đều False nên một gate ngây thơ cho qua.
+2. `evaluator_failures` khác rỗng, kể cả trên run xanh (grader crash = thiếu bằng chứng).
+3. Lưới dòng: số dòng = items × seeds của manifest; không trùng `(item, seed)`; số item và bộ seed trong dòng khớp manifest; manifest và tập `(item, seed)` khớp baseline (bắt bỏ dòng fail, chọn seed đẹp, nhân bản dòng pass).
+4. Mọi metric được chấm theo dòng (`GRADERS` ∩ spec) phải có verdict bool trên **mọi** dòng: None / thiếu trường = grader crash bị rơi khỏi trung bình.
+5. Metric tổng phải bằng giá trị tính lại từ các dòng (bắt sửa tay con số tiêu đề).
+6. Nhãn slice của từng item phải giống baseline (bắt việc chuyển item fail ra khỏi `money_movement`).
+7. Ratchet với `--base-spec`: cùng eval set (cùng `eval_set_version` **hoặc** cùng file `eval_set`, nên đổi nhãn version không thoát được) thì `min` không giảm, `max` / `max_increase` không tăng, không bỏ `no_significant_drop`, blocking không thành non-blocking, không xoá metric hay slice, không đổi bộ seed, không đổi `rng` / `n_resamples` / `method` hay tăng `confidence` của bootstrap.
+
+**Trap công khai** (`python -m lab9.traps --pr reports/eval_slice_regression.json --baseline reports/baseline_v2.json --spec config/metric_spec_v2.yaml`) → 4/4 bị chặn:
+
+| Trap | Lý do gate đưa ra |
+|---|---|
+| `evaluator_errors_as_nan` | 9 dòng không có verdict `refund_amount_correct` / `pass_rate` |
+| `dropped_failing_rows` | 131 dòng thay vì 28 × 5 = 140; thiếu 9 `(item, seed)` so với baseline |
+| `cherry_picked_seeds` | manifest seeds [22, 44] khác baseline; thiếu 84 `(item, seed)` |
+| `loosened_spec` | RATCHET: `min` giảm, bỏ `no_significant_drop`, xoá slice |
+
+**Trap tự dựng thêm** (chạy cục bộ, không commit): nhân bản dòng pass thay dòng fail, `evaluator_failures` trên baseline xanh, sửa metric tổng, chuyển item ra khỏi slice, xoá trường grader, metric inf / chuỗi, xoá slice trong spec, chuyển slice sang non-blocking, đổi nhãn `eval_set_version`, bớt seed trong spec → 11/11 bị chặn; baseline so với chính nó vẫn merge; scorecard vẫn 3/3, 0 báo nhầm.
+
+**Còn lọt được:** sửa **đồng thời** verdict từng dòng và metric tổng cho khớp nhau (giả mạo output grader). Report tự nhất quán nên chỉ nhìn report không phân biệt được với run thật. Chặn bằng quy trình chứ không bằng `integrity_check`: CI tự chạy lại eval trên code của PR và chỉ tin report do chính nó sinh (như `lab9.ci_check` làm cho baseline v1); có thể thêm chữ ký / hash của report do CI tạo.
+
 ## Khi nào tăng eval-set version
 Khi thêm/bớt item (ví dụ biến trace case thành item mới, thêm adversarial pack ở v2), đổi nhãn, hoặc đổi `failure_modes`/`provenance` làm đổi sha → tăng `eval_set_version`, chạy lại baseline trên `main`. Cùng một version, ngưỡng chỉ được chặt hơn (ratchet).
