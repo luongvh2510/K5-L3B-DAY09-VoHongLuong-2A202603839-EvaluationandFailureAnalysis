@@ -80,9 +80,22 @@ Yêu cầu hoàn phí ship trễ và bồi thường hàng hỏng đã xác minh
 | `honest_refactor` | 1.0 | 1.0 / 1.0 | 1.0 | merge |
 | `slice_regression` | 0.936 (ok) | **0.85 / 0.85** | 0.914 (ok) | **block: chỉ slice money_movement** |
 | `seeded_regression` | 0.643 | 0.75 / 0.75 | 0.571 | block (mọi tầng) |
-| `flaky_regression` | 0.914 | 0.917 / 0.867 | 0.929 | block (`pass_rate`, `money_movement`); `pass_hat_5` sẽ thêm ở M6 |
+| `flaky_regression` | 0.914 | 0.917 / 0.867 | 0.929 | block (`pass_rate`, `pass_hat_5` 0.571, `money_movement`) |
 
 (`money_movement` ghi `refund_amount_correct / pass_rate`.)
+
+## v2: nhiễu, pass@k / pass^k và ngưỡng từ A/A (M6)
+
+- **A/A** (`python -m lab9.mutation --spec config/metric_spec_v2.yaml --aa 66,77,88,99,110`): cùng agent `swarm`, hai bộ seed → **Δ = 0 trên mọi metric** (`pass_rate` 0.9786, `pass_hat_5` 0.8929, `pass_hat_3` 0.9357, `pass_at_5` 1.0 ở cả hai bộ). MockLLM tất định theo seed, và seed 110 cũng chia hết cho 5 nên điểm yếu seed 55 của `swarm` lặp lại đúng như cũ.
+- **Với LLM thật dải nhiễu > 0:** cùng prompt, cùng seed vẫn có thể ra câu trả lời khác (sampling, thay đổi phía nhà cung cấp, batch). A/A khi đó cho Δ ≠ 0, và sàn nào nằm trong dải đó sẽ chặn ngẫu nhiên các PR vô hại. Quy trình đúng: chạy A/A nhiều lần, lấy dải Δ (ví dụ phân vị 95%), đặt sàn thấp hơn baseline ít nhất bằng độ rộng dải.
+- **`pass_hat_5` blocking, sàn 0.85:** baseline 0.8929 = 25/28 item pass cả 5 seed (1 item = 0.036). Sàn nằm ngoài dải A/A (= 0), ≥ 0.80, và cho phép tối đa **1** item mới trở nên chập chờn (24/28 = 0.857); từ 2 item trở lên thì chặn. Phần dư 1 item là chỗ cho nhiễu khi chuyển sang LLM thật.
+- **Vì sao cần pass^k:** `pass_rate` trung bình hỏi "đúng bao nhiêu phần trăm lần chạy", `pass^5` hỏi "item nào đúng **mọi** lần". `flaky_regression` (làm tròn sai ở seed 33) giữ `pass_rate` 0.914 trên sàn 0.85; `pass_hat_5` tụt còn 0.571 và chặn thẳng. Ở MockLLM, CI của `pass_rate` cũng tình cờ loại trừ 0 ([−0.114, −0.014]), nhưng một bug chập chờn nhẹ hơn sẽ không đủ cho CI; `pass_hat_5` không phụ thuộc vào điều đó.
+- **Scorecard** (`python -m lab9.mutation --spec config/metric_spec_v2.yaml --baseline reports/baseline_v2.json`): `fixed`, `honest_refactor` merge; `seeded_regression`, `slice_regression`, `flaky_regression` block → **mutation score 3/3 · false alarms 0**.
+- **Thử thêm ngoài variant công khai** (tổ hợp công tắc của `variant_agent`, chạy cục bộ, không commit): `quiet_override` (tin ticket mà không ghi event `model_override`, nên `db_fact_kept` không thấy) không đổi `pass_hat_5` vì các item nó làm hỏng (C-002, C-101, C-102) vốn đã chập chờn ở baseline; slice `denial` / `adversarial` là thứ chặn nó. `misreport` ở mọi tần suất bị `reply_matches_ledger` chặn; `paraphrase` / `extra_lookup` vẫn merge.
+
+### Giới hạn cỡ mẫu
+- Với 5 seed, một bug chỉ bật ở 1/3 số lần chạy có xác suất **không xuất hiện lần nào** trên một item là (2/3)^5 ≈ 13%; với công tắc `rare` (seed chia hết cho 3) chỉ seed 33 trong bộ 11/22/33/44/55 kích hoạt bug, tức nó lộ ra ở đúng 1/5 lần chạy, còn đổi bộ seed thì có thể lộ ở 0 hoặc 2 lần. Gate không phát hiện ổn định loại bug này với 5 seed; cách sửa là tăng số seed (k lớn hơn) hoặc thêm item, **không** hạ ngưỡng cho tới khi gate "bắt được" nó.
+- 28 item: một slice chỉ có 11–14 item, nên CI của slice rất rộng; slice gate dựa vào **sàn** nhiều hơn vào CI.
 
 ## Khi nào tăng eval-set version
 Khi thêm/bớt item (ví dụ biến trace case thành item mới, thêm adversarial pack ở v2), đổi nhãn, hoặc đổi `failure_modes`/`provenance` làm đổi sha → tăng `eval_set_version`, chạy lại baseline trên `main`. Cùng một version, ngưỡng chỉ được chặt hơn (ratchet).
