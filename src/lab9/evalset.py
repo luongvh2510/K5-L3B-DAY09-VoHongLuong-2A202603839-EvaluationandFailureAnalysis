@@ -51,6 +51,7 @@ FROM_TRACE: dict[str, str] = {
     "C-001": "flaky_regression C-001@33",
     "C-002": "swarm C-002@55",
     "C-007": "seeded_regression C-007@11",
+    "C-008": "seeded_regression C-008@11",
     "C-013": "seeded_regression C-013@11",
     "C-014": "seeded_regression C-014@11",
 }
